@@ -265,21 +265,15 @@
         #sana-rant p {
             margin-bottom: 20px;
         }
-        #skip-rant {
+        #cursor-lock {
             position: fixed;
-            bottom: 30px;
-            right: 30px;
-            padding: 12px 24px;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background 0.3s;
-        }
-        #skip-rant:hover {
-            background: rgba(255, 255, 255, 0.2);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            z-index: 9999;
+            display: none;
         }
     </style>
 </head>
@@ -298,7 +292,7 @@
             </ul>
             <p id="intro-3">Team Directive:</p>
             <p id="intro-4">Aiden, Get your freaky chatbot Derrière out of this room.</p>
-            <p id="intro-5">Sana, (Disclaimer: Really long rant - please don't click this)</p>
+            <p id="intro-5">Sana, (Do NOT click the Disclaimer button in the corner)</p>
             <p id="intro-6">Abad Clone 1 and 2 stop playing goddamn Friday Night Funkin'!</p>
             <p id="intro-7">Ethan.... Bombardillo Crocodillo.</p>
             <p id="intro-8">What do you mean Karl Wrote This?! ITS ALL PHOEBE!</p>
@@ -339,8 +333,8 @@
             <p>The 2020s and Beyond: A Dynamic Future</p>
             <p>As of 2025, car culture remains vibrant but at a crossroads. EVs dominate new car markets, with models like the Rivian R1T and Lucid Air pushing boundaries. Yet, internal combustion engines persist, with synthetic fuels and hydrogen offering potential lifelines. Car culture has fully embraced digital platforms, with virtual car shows and NFT-based collectibles emerging. Autonomous vehicles challenge the driver-centric ethos, but enthusiast communities—bolstered by events like Monterey Car Week and grassroots meets—remain defiant. Subcultures continue to evolve, from hypercar collectors to eco-conscious builders retrofitting classic cars with electric drivetrains. Car culture's core—passion, creativity, and community—endures, adapting to technological, social, and environmental shifts while celebrating its rich history.</p>
         </div>
-        <button id="skip-rant">Skip to Game</button>
     </div>
+    <div id="cursor-lock"></div>
     <div id="ui">Level: 1 | Lives: 2</div>
     <button id="restart">Restart</button>
     <div id="taunt-box">
@@ -363,7 +357,7 @@
             { text: "Blackout Events: Random power outages will occur - use your mouse to shine a flashlight!", elementId: 'intro-2-6', isListItem: true },
             { text: "Team Directive:", elementId: 'intro-3' },
             { text: "Aiden, Get your freaky chatbot Derrière out of this room.", elementId: 'intro-4' },
-            { text: "Sana, (Disclaimer: Really long rant - please don't click this)", elementId: 'intro-5' },
+            { text: "Sana, (Do NOT click the Disclaimer button in the corner)", elementId: 'intro-5' },
             { text: "Abad Clone 1 and 2 stop playing goddamn Friday Night Funkin'!", elementId: 'intro-6' },
             { text: "Ethan.... Bombardillo Crocodillo.", elementId: 'intro-7' },
             { text: "What do you mean Karl Wrote This?! ITS ALL PHOEBE!", elementId: 'intro-8' }
@@ -383,8 +377,8 @@
         // Sana rant functionality
         const disclaimerButton = document.getElementById('disclaimer-button');
         const sanaRant = document.getElementById('sana-rant');
-        const skipRant = document.getElementById('skip-rant');
         const startScreen = document.getElementById('start-screen');
+        const cursorLock = document.getElementById('cursor-lock');
         let isRantActive = false;
 
         if (disclaimerButton) {
@@ -392,40 +386,73 @@
                 isRantActive = true;
                 sanaRant.style.display = 'block';
                 startScreen.style.display = 'none';
-                speakRant();
+                cursorLock.style.display = 'block';
+                
+                // Disable right click and keyboard shortcuts
+                document.addEventListener('contextmenu', preventDefault);
+                document.addEventListener('keydown', preventShortcuts);
+                
+                // Force cursor to bottom of screen
+                const lockCursor = () => {
+                    window.scrollTo(0, document.body.scrollHeight);
+                };
+                
+                // Check cursor position every 100ms
+                const cursorCheck = setInterval(lockCursor, 100);
+                
+                // Speak the rant
+                speakRant().then(() => {
+                    // When rant is done, re-enable everything
+                    clearInterval(cursorCheck);
+                    document.removeEventListener('contextmenu', preventDefault);
+                    document.removeEventListener('keydown', preventShortcuts);
+                    cursorLock.style.display = 'none';
+                    endRant();
+                });
             });
         }
 
-        if (skipRant) {
-            skipRant.addEventListener('click', () => {
-                endRant();
-            });
+        function preventDefault(e) {
+            e.preventDefault();
+            return false;
+        }
+
+        function preventShortcuts(e) {
+            // Block common escape keys (F12, Ctrl+W, Alt+F4, etc.)
+            if (e.key === 'F12' || 
+                (e.ctrlKey && e.key === 'w') || 
+                (e.altKey && e.key === 'F4') ||
+                e.key === 'Escape') {
+                e.preventDefault();
+                return false;
+            }
         }
 
         function speakRant() {
-            if (window.speechSynthesis) {
-                window.speechSynthesis.cancel();
-                
-                const rantContent = document.getElementById('sana-rant-content').textContent;
-                const utterance = new SpeechSynthesisUtterance(rantContent);
-                utterance.pitch = 1.0;
-                utterance.rate = 0.9;
-                
-                utterance.onend = () => {
-                    if (isRantActive) {
-                        endRant();
-                    }
-                };
-                
-                window.speechSynthesis.speak(utterance);
-            } else {
-                // If TTS isn't available, just show the text for 30 seconds
-                setTimeout(() => {
-                    if (isRantActive) {
-                        endRant();
-                    }
-                }, 30000);
-            }
+            return new Promise((resolve) => {
+                if (window.speechSynthesis) {
+                    window.speechSynthesis.cancel();
+                    
+                    const rantContent = document.getElementById('sana-rant-content').textContent;
+                    const utterance = new SpeechSynthesisUtterance(rantContent);
+                    utterance.pitch = 1.0;
+                    utterance.rate = 0.9;
+                    
+                    utterance.onend = () => {
+                        resolve();
+                    };
+                    
+                    utterance.onerror = () => {
+                        // If speech fails, wait 30 seconds then resolve
+                        setTimeout(resolve, 30000);
+                    };
+                    
+                    window.speechSynthesis.speak(utterance);
+                } else {
+                    // If TTS isn't available, wait 30 seconds then resolve
+                    setTimeout(resolve, 30000);
+                }
+            });
         }
 
         function endRant() {
@@ -869,15 +896,15 @@
                 goal: { x: 700, y: 150, w: 30, h: 30 },
                 playerStart: { x: 50, y: 527.5 }
             },
-            { // Level 2 - Introduce moving platform
+            { // Level 2 - Basic platforming
                 platforms: [
                     { x: 50, y: 550, w: 100, h: 15, friction: 0.5, restitution: 0, isStatic: true },
-                    { x: 200, y: 480, w: 80, h: 15, friction: 0.3, isMoving: true, range: { start: 150, end: 350, speed: 2 } },
-                    { x: 500, y: 400, w: 80, h: 15, friction: 0.3 },
-                    { x: 300, y: 340, w: 80, h: 15, friction: 0.3 }
+                    { x: 200, y: 480, w: 80, h: 15, friction: 0.3 },
+                    { x: 400, y: 400, w: 80, h: 15, friction: 0.3 },
+                    { x: 600, y: 340, w: 80, h: 15, friction: 0.3 }
                 ],
                 hazards: [],
-                goal: { x: 600, y: 150, w: 30, h: 30 },
+                goal: { x: 700, y: 150, w: 30, h: 30 },
                 playerStart: { x: 50, y: 527.5 }
             },
             { // Level 3 - Introduce hazards
@@ -912,7 +939,7 @@
                     { x: 600, y: 340, w: 60, h: 15, friction: 0.3 }
                 ],
                 hazards: [
-                    { x: 300, y: 450, w: 50, h: 50, isMoving: true, range: { start: 250, end: 350, speed: 3 } }
+                    { x: 300, y: 450, w: 50, h: 50 }
                 ],
                 goal: { x: 600, y: 150, w: 30, h: 30 },
                 playerStart: { x: 50, y: 527.5 }
@@ -928,10 +955,10 @@
                 goal: { x: 700, y: 150, w: 30, h: 30 },
                 playerStart: { x: 50, y: 527.5 }
             },
-            { // Level 7 - Combine moving platform and hazards
+            { // Level 7 - Combine hazards and fragile platforms
                 platforms: [
                     { x: 50, y: 550, w: 100, h: 15, friction: 0.5, restitution: 0, isStatic: true },
-                    { x: 200, y: 480, w: 60, h: 15, friction: 0.3, isMoving: true, range: { start: 150, end: 350, speed: 2 } },
+                    { x: 200, y: 480, w: 60, h: 15, friction: 0.3, isFragile: true },
                     { x: 500, y: 400, w: 60, h: 15, friction: 0.3 },
                     { x: 300, y: 340, w: 60, h: 15, friction: 0.3 }
                 ],
@@ -941,34 +968,38 @@
                 goal: { x: 700, y: 150, w: 30, h: 30 },
                 playerStart: { x: 50, y: 527.5 }
             },
-            { // Level 8 - Combine fragile and moving hazards
+            { // Level 8 - More hazards
                 platforms: [
                     { x: 50, y: 550, w: 100, h: 15, friction: 0.5, restitution: 0, isStatic: true },
-                    { x: 200, y: 480, w: 60, h: 15, friction: 0.3, isFragile: true },
+                    { x: 200, y: 480, w: 60, h: 15, friction: 0.3 },
                     { x: 500, y: 400, w: 60, h: 15, friction: 0.3 },
                     { x: 300, y: 340, w: 60, h: 15, friction: 0.3 }
                 ],
                 hazards: [
-                    { x: 300, y: 450, w: 50, h: 50, isMoving: true, range: { start: 250, end: 450, speed: 3 } }
+                    { x: 300, y: 450, w: 50, h: 50 },
+                    { x: 400, y: 400, w: 50, h: 50 }
                 ],
                 goal: { x: 700, y: 150, w: 30, h: 30 },
                 playerStart: { x: 50, y: 527.5 }
             },
-            { // Level 9 - Combine shrinking and moving platforms
-                platforms: [
-                    { x: 50, y: 550, w: 100, h: 15, friction: 0.5, restitution: 0, isStatic: true },
-                    { x: 200, y: 480, w: 60, h: 15, friction: 0.3, isMoving: true, range: { start: 150, end: 350, speed: 2 } },
-                    { x: 500, y: 400, w: 60, h: 15, friction: 0.3, isShrinking: true },
-                    { x: 300, y: 340, w: 60, h: 15, friction: 0.3 }
-                ],
-                hazards: [],
-                goal: { x: 700, y: 150, w: 30, h: 30 },
-                playerStart: { x: 50, y: 527.5 }
-            },
-            { // Level 10 - Introduce moving goal
+            { // Level 9 - Shrinking platforms with hazards
                 platforms: [
                     { x: 50, y: 550, w: 100, h: 15, friction: 0.5, restitution: 0, isStatic: true },
                     { x: 200, y: 480, w: 60, h: 15, friction: 0.3 },
+                    { x: 300, y: 400, w: 60, h: 15, friction: 0.3, isShrinking: true },
+                    { x: 400, y: 340, w: 60, h: 15, friction: 0.3 }
+                ],
+                hazards: [
+                    { x: 250, y: 450, w: 50, h: 50 },
+                    { x: 300, y: 400, w: 50, h: 50 }
+                ],
+                goal: { x: 500, y: 150, w: 30, h: 30 },
+                playerStart: { x: 50, y: 527.5 }
+            },
+            { // Level 10 - Introduce moving platforms
+                platforms: [
+                    { x: 50, y: 550, w: 100, h: 15, friction: 0.5, restitution: 0, isStatic: true },
+                    { x: 200, y: 480, w: 60, h: 15, friction: 0.3, isMoving: true, range: { start: 150, end: 350, speed: 2 } },
                     { x: 400, y: 400, w: 60, h: 15, friction: 0.3 },
                     { x: 600, y: 340, w: 60, h: 15, friction: 0.3 }
                 ],
@@ -981,7 +1012,7 @@
             { // Level 11 - More complex platform arrangement
                 platforms: [
                     { x: 50, y: 550, w: 100, h: 15, friction: 0.5, restitution: 0, isStatic: true },
-                    { x: 100, y: 480, w: 60, h: 15, isMoving: true, range: { start: 100, end: 300, speed: 3 } },
+                    { x: 100, y: 480, w: 60, h: 15, friction: 0.3 },
                     { x: 500, y: 400, w: 60, h: 15, friction: 0.3 },
                     { x: 300, y: 340, w: 60, h: 15, friction: 0.3 }
                 ],
@@ -999,7 +1030,7 @@
                     { x: 300, y: 340, w: 60, h: 15, friction: 0.3 }
                 ],
                 hazards: [
-                    { x: 300, y: 450, w: 50, h: 50, isMoving: true, range: { start: 250, end: 350, speed: 3 } },
+                    { x: 300, y: 450, w: 50, h: 50 },
                     { x: 400, y: 400, w: 50, h: 50 }
                 ],
                 goal: { x: 700, y: 150, w: 30, h: 30 },
@@ -1019,14 +1050,15 @@
                 goal: { x: 500, y: 150, w: 30, h: 30 },
                 playerStart: { x: 50, y: 527.5 }
             },
-            { // Level 14 - Fast moving platform
+            { // Level 14 - Fast moving hazards
                 platforms: [
                     { x: 50, y: 550, w: 100, h: 15, friction: 0.5, restitution: 0, isStatic: true },
-                    { x: 100, y: 480, w: 50, h: 15, friction: 0.05, isMoving: true, range: { start: 100, end: 250, speed: 4 } },
-                    { x: 400, y: 400, w: 50, h: 15, friction: 0.4, isFragile: true },
+                    { x: 200, y: 480, w: 50, h: 15, friction: 0.4, isFragile: true },
                     { x: 600, y: 340, w: 50, h: 15, friction: 0.4 }
                 ],
-                hazards: [],
+                hazards: [
+                    { x: 300, y: 450, w: 50, h: 50, isMoving: true, range: { start: 250, end: 450, speed: 3 } }
+                ],
                 goal: { x: 700, y: 150, w: 30, h: 30 },
                 playerStart: { x: 50, y: 527.5 }
             },
@@ -1038,7 +1070,7 @@
                     { x: 600, y: 340, w: 50, h: 15, friction: 0.4 }
                 ],
                 hazards: [
-                    { x: 300, y: 450, w: 50, h: 50, isMoving: true, range: { start: 250, end: 350, speed: 3 } }
+                    { x: 300, y: 450, w: 50, h: 50 }
                 ],
                 goal: { x: 700, y: 150, w: 30, h: 30, isMoving: true, range: { start: 650, end: 750, speed: 3 } },
                 playerStart: { x: 50, y: 527.5 }
@@ -1051,7 +1083,7 @@
                     { x: 300, y: 340, w: 60, h: 15, friction: 0.3 }
                 ],
                 hazards: [
-                    { x: 300, y: 450, w: 50, h: 50, restitution: 1.5, isMoving: true, range: { start: 250, end: 450, speed: 3 } }
+                    { x: 300, y: 450, w: 50, h: 50, restitution: 1.5 }
                 ],
                 goal: { x: 700, y: 150, w: 30, h: 30 },
                 playerStart: { x: 50, y: 527.5 }
@@ -1064,10 +1096,10 @@
                     { x: 400, y: 340, w: 60, h: 15, friction: 0.3 }
                 ],
                 hazards: [
-                    { x: 400, y: 450, w: 50, h: 50, isMoving: true, range: { start: 350, end: 450, speed: 3 } },
+                    { x: 400, y: 450, w: 50, h: 50 },
                     { x: 450, y: 400, w: 50, h: 50 }
                 ],
-                goal: { x: 700, y: 150, w: 30, h: 30, isMoving: true, range: { start: 650, end: 750, speed: 3 } },
+                goal: { x: 700, y: 150, w: 30, h: 30 },
                 playerStart: { x: 50, y: 527.5 }
             },
             { // Level 18 - Fragile platforms with moving goal
@@ -1084,7 +1116,7 @@
                 goal: { x: 600, y: 150, w: 30, h: 30, isMoving: true, range: { start: 550, end: 650, speed: 3 } },
                 playerStart: { x: 50, y: 527.5 }
             },
-            { // Level 19 - Multiple moving hazards
+            { // Level 19 - Multiple hazards
                 platforms: [
                     { x: 50, y: 550, w: 100, h: 15, friction: 0.5, restitution: 0, isStatic: true },
                     { x: 200, y: 480, w: 60, h: 15, friction: 0.3 },
@@ -1092,7 +1124,7 @@
                     { x: 600, y: 340, w: 60, h: 15, friction: 0.3 }
                 ],
                 hazards: [
-                    { x: 300, y: 450, w: 50, h: 50, isMoving: true, range: { start: 250, end: 350, speed: 3 } },
+                    { x: 300, y: 450, w: 50, h: 50 },
                     { x: 400, y: 400, w: 50, h: 50 },
                     { x: 500, y: 400, w: 50, h: 50 }
                 ],
@@ -1107,8 +1139,8 @@
                     { x: 600, y: 340, w: 50, h: 15, friction: 0.4 }
                 ],
                 hazards: [
-                    { x: 300, y: 450, w: 50, h: 50, isMoving: true, range: { start: 250, end: 450, speed: 4 } },
-                    { x: 500, y: 400, w: 50, h: 50, isMoving: true, range: { start: 450, end: 550, speed: 4 } }
+                    { x: 300, y: 450, w: 50, h: 50 },
+                    { x: 500, y: 400, w: 50, h: 50 }
                 ],
                 goal: { x: 700, y: 150, w: 30, h: 30, isMoving: true, range: { start: 650, end: 750, speed: 4 } },
                 playerStart: { x: 50, y: 527.5 }
