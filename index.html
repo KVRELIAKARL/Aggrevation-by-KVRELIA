@@ -275,6 +275,51 @@
             z-index: 9999;
             display: none;
         }
+        #stuck-message {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(255, 95, 86, 0.8);
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+            font-size: 24px;
+            font-weight: bold;
+            white-space: nowrap;
+            z-index: 1000;
+            display: none;
+            animation: scrollText 10s linear infinite;
+        }
+        @keyframes scrollText {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        #notification-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 95, 86, 0.9);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+            text-align: center;
+            max-width: 80%;
+        }
+        #notification-box button {
+            background: white;
+            color: #ff5f56;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            margin-top: 10px;
+            cursor: pointer;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -335,6 +380,11 @@
         </div>
     </div>
     <div id="cursor-lock"></div>
+    <div id="stuck-message">haha... YOUR STUCK HERE!!!!</div>
+    <div id="notification-box">
+        <p>You can't do that! You must click the Disclaimer button first!</p>
+        <button id="notification-ok">OK</button>
+    </div>
     <div id="ui">Level: 1 | Lives: 2</div>
     <button id="restart">Restart</button>
     <div id="taunt-box">
@@ -379,7 +429,46 @@
         const sanaRant = document.getElementById('sana-rant');
         const startScreen = document.getElementById('start-screen');
         const cursorLock = document.getElementById('cursor-lock');
+        const stuckMessage = document.getElementById('stuck-message');
+        const notificationBox = document.getElementById('notification-box');
+        const notificationOk = document.getElementById('notification-ok');
         let isRantActive = false;
+
+        // Make start button do nothing and show notification
+        const startButton = document.getElementById('start-button');
+        if (startButton) {
+            startButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Show notification
+                notificationBox.style.display = 'block';
+                
+                // Force disclaimer button to be visible
+                disclaimerButton.style.display = 'block';
+                disclaimerButton.style.animation = 'pulse 0.5s infinite alternate';
+                
+                // Scroll disclaimer into view if needed
+                disclaimerButton.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                
+                // Create a pulsing animation for the disclaimer button
+                const style = document.createElement('style');
+                style.innerHTML = `
+                    @keyframes pulse {
+                        from { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 95, 86, 0.7); }
+                        to { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(255, 95, 86, 0); }
+                    }
+                `;
+                document.head.appendChild(style);
+            });
+        }
+
+        // Notification OK button
+        if (notificationOk) {
+            notificationOk.addEventListener('click', () => {
+                notificationBox.style.display = 'none';
+            });
+        }
 
         if (disclaimerButton) {
             disclaimerButton.addEventListener('click', () => {
@@ -387,6 +476,10 @@
                 sanaRant.style.display = 'block';
                 startScreen.style.display = 'none';
                 cursorLock.style.display = 'block';
+                stuckMessage.style.display = 'block';
+                
+                // Show the stuck message
+                stuckMessage.style.display = 'block';
                 
                 // Disable right click and keyboard shortcuts
                 document.addEventListener('contextmenu', preventDefault);
@@ -400,6 +493,9 @@
                 // Check cursor position every 100ms
                 const cursorCheck = setInterval(lockCursor, 100);
                 
+                // Scroll disclaimer content into view
+                sanaRant.scrollIntoView({ behavior: 'smooth' });
+                
                 // Speak the rant
                 speakRant().then(() => {
                     // When rant is done, re-enable everything
@@ -407,6 +503,7 @@
                     document.removeEventListener('contextmenu', preventDefault);
                     document.removeEventListener('keydown', preventShortcuts);
                     cursorLock.style.display = 'none';
+                    stuckMessage.style.display = 'none';
                     endRant();
                 });
             });
@@ -625,26 +722,18 @@
         const maxVerticalVelocity = 6; // Tightened to prevent ceiling hits
         const inputDelay = 30;
 
-        // Start Game
-        const startButton = document.getElementById('start-button');
+        // Start Game - Modified to show notification instead
         if (startButton) {
             startButton.addEventListener('click', () => {
-                startScreen.style.opacity = '0';
-                setTimeout(() => {
-                    startScreen.style.display = 'none';
-                    canvas.style.display = 'block';
-                    const ui = document.getElementById('ui');
-                    if (ui) ui.style.display = 'block';
-                    const restart = document.getElementById('restart');
-                    if (restart) restart.style.display = 'block';
-                    const tauntBox = document.getElementById('taunt-box');
-                    if (tauntBox) {
-                        tauntBox.style.display = 'flex';
-                        tauntBox.classList.add('visible');
-                    }
-                    loadLevel(currentLevel);
-                    gameLoop();
-                }, 500);
+                // Show notification
+                notificationBox.style.display = 'block';
+                
+                // Force disclaimer button to be visible
+                disclaimerButton.style.display = 'block';
+                disclaimerButton.style.animation = 'pulse 0.5s infinite alternate';
+                
+                // Scroll disclaimer into view if needed
+                disclaimerButton.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             });
         }
 
